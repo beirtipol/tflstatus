@@ -17,35 +17,30 @@
 
     /* Scalable container */
     .container {
-      width: 400px;              /* base layout width */
-      transform: scale(0.75);    /* adjust this for your panel */
+      width: 420px;              /* base layout width */
+      transform: scale(1);       /* main scaling control */
       transform-origin: top center;
       font-family: Arial, sans-serif;
       color: white;
     }
 
-    .header {
-      padding: 16px;
-      font-size: 22px;
-      font-weight: bold;
-      border-bottom: 2px solid #333;
-    }
-
     .line {
-      padding: 12px 16px;
+      padding: 16px 18px;
       border-bottom: 1px solid #222;
-      font-size: 18px;
     }
 
     .name {
       display: block;
       font-weight: bold;
+      font-size: 26px;           /* larger line name */
+      line-height: 1.1;
     }
 
     .status {
       display: block;
-      font-size: 14px;
-      opacity: 0.85;
+      font-size: 18px;           /* larger status text */
+      opacity: 0.9;
+      margin-top: 4px;
     }
 
     .good { color: #00ff88; }
@@ -55,7 +50,6 @@
 
 <body>
   <div class="container">
-    <div class="header">Tube Status</div>
     <div id="board"></div>
   </div>
 
@@ -86,12 +80,12 @@
 
       } catch (e) {
         document.getElementById('board').innerHTML =
-          '<div style="padding:16px;">Error loading data</div>';
+          '<div style="padding:16px;font-size:20px;">Error loading data</div>';
       }
     }
 
     loadStatus();
-    setInterval(loadStatus, 60000); // refresh every 60s
+    setInterval(loadStatus, 60000);
   </script>
 </body>
 </html>
