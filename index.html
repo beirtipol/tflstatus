@@ -4,51 +4,94 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>TfL Sidebar</title>
+
   <style>
     body {
       margin: 0;
-      font-family: Arial, sans-serif;
       background: black;
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+      overflow: hidden;
+    }
+
+    /* Scalable container */
+    .container {
+      width: 400px;              /* base layout width */
+      transform: scale(0.75);    /* adjust this for your panel */
+      transform-origin: top center;
+      font-family: Arial, sans-serif;
       color: white;
     }
-    .line {
-      padding: 14px;
-      border-bottom: 1px solid #222;
-      font-size: 20px;
-      display: flex;
-      justify-content: space-between;
+
+    .header {
+      padding: 16px;
+      font-size: 22px;
+      font-weight: bold;
+      border-bottom: 2px solid #333;
     }
+
+    .line {
+      padding: 12px 16px;
+      border-bottom: 1px solid #222;
+      font-size: 18px;
+    }
+
+    .name {
+      display: block;
+      font-weight: bold;
+    }
+
+    .status {
+      display: block;
+      font-size: 14px;
+      opacity: 0.85;
+    }
+
     .good { color: #00ff88; }
     .bad { color: #ff4d4d; }
   </style>
 </head>
+
 <body>
+  <div class="container">
+    <div class="header">Tube Status</div>
+    <div id="board"></div>
+  </div>
 
-<div id="board"></div>
+  <script>
+    async function loadStatus() {
+      try {
+        const res = await fetch('https://api.tfl.gov.uk/Line/Mode/tube/Status');
+        const data = await res.json();
 
-<script>
-fetch('https://api.tfl.gov.uk/Line/Mode/tube/Status')
-  .then(r => r.json())
-  .then(data => {
-    const board = document.getElementById('board');
+        const board = document.getElementById('board');
+        board.innerHTML = '';
 
-    data.forEach(line => {
-      const status = line.lineStatuses[0].statusSeverityDescription;
+        data.forEach(line => {
+          const status = line.lineStatuses[0].statusSeverityDescription;
 
-      const el = document.createElement('div');
-      el.className = 'line';
+          const el = document.createElement('div');
+          el.className = 'line';
 
-      el.innerHTML = `
-        <span>${line.name}</span>
-        <span class="${status === 'Good Service' ? 'good' : 'bad'}">
-          ${status}
-        </span>
-      `;
+          el.innerHTML = `
+            <span class="name">${line.name}</span>
+            <span class="status ${status === 'Good Service' ? 'good' : 'bad'}">
+              ${status}
+            </span>
+          `;
 
-      board.appendChild(el);
-    });
-  });
-</script>
+          board.appendChild(el);
+        });
 
+      } catch (e) {
+        document.getElementById('board').innerHTML =
+          '<div style="padding:16px;">Error loading data</div>';
+      }
+    }
+
+    loadStatus();
+    setInterval(loadStatus, 60000); // refresh every 60s
+  </script>
 </body>
 </html>
