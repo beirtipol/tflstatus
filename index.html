@@ -16,6 +16,15 @@
       width: 100%;
     }
 
+    .section-title {
+      font-size: clamp(14px, 1.8vw, 28px);
+      font-weight: bold;
+      padding: 1.2vh 1vw;
+      background: #333;
+      color: white;
+      margin-top: 1vh;
+    }
+
     .row {
       display: flex;
       width: 100%;
@@ -48,6 +57,31 @@
     .bad {
       background: #cc0000;
     }
+
+    .station-row {
+      display: flex;
+      width: 100%;
+      margin: 0.3vh 0;
+      font-size: clamp(12px, 1.6vw, 24px);
+      padding: 0.8vh 1vw;
+      border-bottom: 1px solid #ddd;
+    }
+
+    .station-name {
+      flex: 1;
+      font-weight: bold;
+    }
+
+    .station-status {
+      white-space: nowrap;
+      margin-left: 1vw;
+    }
+
+    .station-section {
+      margin-top: 1vh;
+      border: 1px solid #ccc;
+      background: #f9f9f9;
+    }
   </style>
 </head>
 
@@ -69,13 +103,30 @@
       "Waterloo & City": "#95CDBA"
     };
 
-    async function loadStatus() {
+    const overgroundColors = {
+      "Bakerloo": "#B36305",
+      "East London": "#999999",
+      "East Anglia": "#FF8200",
+      "Great Western": "#1A1A1A",
+      "Merseyrail": "#FF6600",
+      "Southern": "#00AA44",
+      "South Eastern": "#0078D4",
+      "South Western": "#CC0000",
+      "West Anglia": "#009999"
+    };
+
+    async function loadTubeStatus() {
       try {
         const res = await fetch('https://api.tfl.gov.uk/Line/Mode/tube/Status');
         const data = await res.json();
 
         const board = document.getElementById('board');
-        board.innerHTML = '';
+        
+        // Add Tube section title
+        const tubeTitle = document.createElement('div');
+        tubeTitle.className = 'section-title';
+        tubeTitle.textContent = 'London Underground';
+        board.appendChild(tubeTitle);
 
         data.forEach(line => {
           const status = line.lineStatuses[0].statusSeverityDescription;
@@ -99,13 +150,126 @@
         });
 
       } catch (e) {
-        document.getElementById('board').innerHTML =
-          '<div style="padding:16px;">Error loading data</div>';
+        console.error('Error loading tube data:', e);
       }
     }
 
-    loadStatus();
-    setInterval(loadStatus, 60000);
+    async function loadOvergroundStatus() {
+      try {
+        const res = await fetch('https://api.tfl.gov.uk/Line/Mode/overground/Status');
+        const data = await res.json();
+
+        const board = document.getElementById('board');
+        
+        // Add Overground section title
+        const overgroundTitle = document.createElement('div');
+        overgroundTitle.className = 'section-title';
+        overgroundTitle.textContent = 'London Overground';
+        board.appendChild(overgroundTitle);
+
+        data.forEach(line => {
+          const status = line.lineStatuses[0].statusSeverityDescription;
+          const isGood = status === 'Good Service';
+
+          const row = document.createElement('div');
+          row.className = 'row';
+
+          const name = document.createElement('div');
+          name.className = 'line-name';
+          name.textContent = line.name;
+          name.style.background = overgroundColors[line.name] || '#666';
+
+          const statusEl = document.createElement('div');
+          statusEl.className = 'status ' + (isGood ? 'good' : 'bad');
+          statusEl.textContent = status;
+
+          row.appendChild(name);
+          row.appendChild(statusEl);
+          board.appendChild(row);
+        });
+
+      } catch (e) {
+        console.error('Error loading overground data:', e);
+      }
+    }
+
+    async function loadStationStatus() {
+      try {
+        const stationIds = ['940GZZLUPD', '940GZZLUMB']; // Paddington, Marylebone
+        const stationNames = ['Paddington', 'Marylebone'];
+        
+        const board = document.getElementById('board');
+        
+        // Add Stations section title
+        const stationsTitle = document.createElement('div');
+        stationsTitle.className = 'section-title';
+        stationsTitle.textContent = 'Train Departures';
+        board.appendChild(stationsTitle);
+
+        for (let i = 0; i < stationIds.length; i++) {
+          const stationId = stationIds[i];
+          const stationName = stationNames[i];
+          
+          try {
+            const res = await fetch(`https://api.tfl.gov.uk/StopPoint/${stationId}/Arrivals?$top=5`);
+            const arrivals = await res.json();
+
+            const stationSection = document.createElement('div');
+            stationSection.className = 'station-section';
+
+            const stationTitle = document.createElement('div');
+            stationTitle.style.padding = '1vh 1vw';
+            stationTitle.style.fontWeight = 'bold';
+            stationTitle.style.fontSize = 'clamp(13px, 1.7vw, 26px)';
+            stationTitle.textContent = stationName;
+            stationSection.appendChild(stationTitle);
+
+            if (arrivals.length > 0) {
+              arrivals.slice(0, 3).forEach(arrival => {
+                const row = document.createElement('div');
+                row.className = 'station-row';
+
+                const destination = document.createElement('div');
+                destination.className = 'station-name';
+                destination.textContent = arrival.destinationName || 'Unknown';
+
+                const timeToStation = document.createElement('div');
+                timeToStation.className = 'station-status';
+                const mins = arrival.timeToStation ? Math.round(arrival.timeToStation / 60) : 0;
+                timeToStation.textContent = mins <= 0 ? 'Now' : `${mins}min`;
+
+                row.appendChild(destination);
+                row.appendChild(timeToStation);
+                stationSection.appendChild(row);
+              });
+            } else {
+              const noData = document.createElement('div');
+              noData.style.padding = '1vh 1vw';
+              noData.textContent = 'No arrivals data';
+              stationSection.appendChild(noData);
+            }
+
+            board.appendChild(stationSection);
+          } catch (e) {
+            console.error(`Error loading ${stationName} data:`, e);
+          }
+        }
+
+      } catch (e) {
+        console.error('Error loading stations data:', e);
+      }
+    }
+
+    async function loadAllStatus() {
+      const board = document.getElementById('board');
+      board.innerHTML = '';
+      await loadTubeStatus();
+      await loadOvergroundStatus();
+      await loadStationStatus();
+    }
+
+    loadAllStatus();
+    setInterval(loadAllStatus, 60000);
   </script>
 </body>
 </html>
