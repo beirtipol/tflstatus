@@ -33,7 +33,7 @@
     }
 
     .line-name {
-      flex: 1; /* takes full remaining width */
+      flex: 1;
       padding: 1.2vh 1vw;
       font-weight: bold;
       color: white;
@@ -50,13 +50,8 @@
       align-items: center;
     }
 
-    .good {
-      background: #008000;
-    }
-
-    .bad {
-      background: #cc0000;
-    }
+    .good { background: #008000; }
+    .bad { background: #cc0000; }
 
     .station-row {
       display: flex;
@@ -100,187 +95,136 @@
       "Northern": "#000000",
       "Piccadilly": "#003688",
       "Victoria": "#0098D4",
-      "Waterloo & City": "#95CDBA"
+      "Waterloo & City": "#95CDBA",
+      "Elizabeth line": "#6950A1"
     };
 
-    const overgroundColors = {
-      "Bakerloo": "#B36305",
-      "East London": "#999999",
-      "East Anglia": "#FF8200",
-      "Great Western": "#1A1A1A",
-      "Merseyrail": "#FF6600",
-      "Southern": "#00AA44",
-      "South Eastern": "#0078D4",
-      "South Western": "#CC0000",
-      "West Anglia": "#009999"
-    };
+    const PADDINGTON_ID = "940GZZLUPAD";
+    const MARYLEBONE_ID = "910GMARYLBN";
+
+    async function getArrivals(stopId) {
+      const res = await fetch(`https://api.tfl.gov.uk/StopPoint/${stopId}/Arrivals`);
+      const data = await res.json();
+
+      return data
+        .sort((a, b) => a.timeToStation - b.timeToStation)
+        .slice(0, 5);
+    }
+
+    function addStationSection(title, color, arrivals) {
+      const board = document.getElementById('board');
+
+      const section = document.createElement('div');
+      section.className = 'station-section';
+
+      const header = document.createElement('div');
+      header.className = 'section-title';
+      header.style.background = color;
+      header.textContent = title;
+
+      section.appendChild(header);
+
+      if (!arrivals || arrivals.length === 0) {
+        const row = document.createElement('div');
+        row.className = 'station-row';
+        row.textContent = 'No live departures';
+        section.appendChild(row);
+        board.appendChild(section);
+        return;
+      }
+
+      arrivals.forEach(t => {
+        const row = document.createElement('div');
+        row.className = 'station-row';
+
+        const name = document.createElement('div');
+        name.className = 'station-name';
+        name.textContent = t.destinationName;
+
+        const time = document.createElement('div');
+        time.className = 'station-status';
+        time.textContent = `${Math.round(t.timeToStation / 60)} min`;
+
+        row.appendChild(name);
+        row.appendChild(time);
+        section.appendChild(row);
+      });
+
+      board.appendChild(section);
+    }
+
+    async function loadElizabethStatus() {
+      const res = await fetch("https://api.tfl.gov.uk/Line/elizabeth/status");
+      const data = await res.json();
+
+      const line = data[0];
+      const status = line.lineStatuses[0].statusSeverityDescription;
+      const isGood = status === "Good Service";
+
+      const board = document.getElementById('board');
+
+      const row = document.createElement('div');
+      row.className = 'row';
+
+      const name = document.createElement('div');
+      name.className = 'line-name';
+      name.textContent = "Elizabeth line";
+      name.style.background = lineColors["Elizabeth line"];
+
+      const statusEl = document.createElement('div');
+      statusEl.className = 'status ' + (isGood ? 'good' : 'bad');
+      statusEl.textContent = status;
+
+      row.appendChild(name);
+      row.appendChild(statusEl);
+      board.appendChild(row);
+    }
 
     async function loadTubeStatus() {
-      try {
-        const res = await fetch('https://api.tfl.gov.uk/Line/Mode/tube/Status');
-        const data = await res.json();
+      const res = await fetch('https://api.tfl.gov.uk/Line/Mode/tube/Status');
+      const data = await res.json();
 
-        const board = document.getElementById('board');
-        
-        // Add Tube section title
-        const tubeTitle = document.createElement('div');
-        tubeTitle.className = 'section-title';
-        tubeTitle.textContent = 'London Underground';
-        board.appendChild(tubeTitle);
+      const board = document.getElementById('board');
 
-        data.forEach(line => {
-          const status = line.lineStatuses[0].statusSeverityDescription;
-          const isGood = status === 'Good Service';
+      const tubeTitle = document.createElement('div');
+      tubeTitle.className = 'section-title';
+      tubeTitle.textContent = 'London Underground';
+      board.appendChild(tubeTitle);
 
-          const row = document.createElement('div');
-          row.className = 'row';
+      data.forEach(line => {
+        const status = line.lineStatuses[0].statusSeverityDescription;
+        const isGood = status === 'Good Service';
 
-          const name = document.createElement('div');
-          name.className = 'line-name';
-          name.textContent = line.name;
-          name.style.background = lineColors[line.name] || '#000';
+        const row = document.createElement('div');
+        row.className = 'row';
 
-          const statusEl = document.createElement('div');
-          statusEl.className = 'status ' + (isGood ? 'good' : 'bad');
-          statusEl.textContent = status;
+        const name = document.createElement('div');
+        name.className = 'line-name';
+        name.textContent = line.name;
+        name.style.background = lineColors[line.name] || '#000';
 
-          row.appendChild(name);
-          row.appendChild(statusEl);
-          board.appendChild(row);
-        });
+        const statusEl = document.createElement('div');
+        statusEl.className = 'status ' + (isGood ? 'good' : 'bad');
+        statusEl.textContent = status;
 
-      } catch (e) {
-        console.error('Error loading tube data:', e);
-      }
+        row.appendChild(name);
+        row.appendChild(statusEl);
+        board.appendChild(row);
+      });
     }
-
-    async function loadOvergroundStatus() {
-      try {
-        const res = await fetch('https://api.tfl.gov.uk/Line/Mode/overground/Status');
-        const data = await res.json();
-
-        const board = document.getElementById('board');
-        
-        // Add Overground section title
-        const overgroundTitle = document.createElement('div');
-        overgroundTitle.className = 'section-title';
-        overgroundTitle.textContent = 'London Overground';
-        board.appendChild(overgroundTitle);
-
-        data.forEach(line => {
-          const status = line.lineStatuses[0].statusSeverityDescription;
-          const isGood = status === 'Good Service';
-
-          const row = document.createElement('div');
-          row.className = 'row';
-
-          const name = document.createElement('div');
-          name.className = 'line-name';
-          name.textContent = line.name;
-          name.style.background = overgroundColors[line.name] || '#666';
-
-          const statusEl = document.createElement('div');
-          statusEl.className = 'status ' + (isGood ? 'good' : 'bad');
-          statusEl.textContent = status;
-
-          row.appendChild(name);
-          row.appendChild(statusEl);
-          board.appendChild(row);
-        });
-
-      } catch (e) {
-        console.error('Error loading overground data:', e);
-      }
-    }
-
-async function loadNationalRailBoard(crs, name) {
-  const res = await fetch(`https://transportapi.com/v3/uk/train/station/${crs}/live.json?app_id=demo&app_key=demo&darwin=false&train_status=passenger`);
-  const data = await res.json();
-
-  const services = (data.departures?.all || [])
-    .slice(0, 5);
-
-  const alerts = data.disruptions || [];
-
-  const section = document.createElement('div');
-  section.className = 'station-section';
-
-  const title = document.createElement('div');
-  title.style.padding = '1vh 1vw';
-  title.style.fontWeight = 'bold';
-  title.style.fontSize = 'clamp(13px, 1.7vw, 26px)';
-  title.textContent = name;
-
-  section.appendChild(title);
-
-  // alerts (if any)
-  if (alerts.length > 0) {
-    const alertBox = document.createElement('div');
-    alertBox.style.padding = '1vh 1vw';
-    alertBox.style.background = '#ffdddd';
-    alertBox.style.color = '#900';
-    alertBox.style.fontSize = 'clamp(12px, 1.5vw, 20px)';
-    alertBox.textContent = alerts[0].title || 'Service disruption';
-    section.appendChild(alertBox);
-  }
-
-  if (services.length === 0) {
-    const none = document.createElement('div');
-    none.style.padding = '1vh 1vw';
-    none.textContent = 'No departures';
-    section.appendChild(none);
-    return section;
-  }
-
-  services.forEach(s => {
-    const row = document.createElement('div');
-    row.className = 'station-row';
-
-    const dest = document.createElement('div');
-    dest.className = 'station-name';
-    dest.textContent = s.destination_name || 'Unknown';
-
-    const time = document.createElement('div');
-    time.className = 'station-status';
-    time.textContent = s.best_departure_estimate || s.expected_departure_time || '';
-
-    row.appendChild(dest);
-    row.appendChild(time);
-    section.appendChild(row);
-  });
-
-  return section;
-}
-
-async function loadStationStatus() {
-  const board = document.getElementById('board');
-
-  const title = document.createElement('div');
-  title.className = 'section-title';
-  title.textContent = 'National Rail Departures';
-  board.appendChild(title);
-
-  const stations = [
-    { name: "Paddington", crs: "PAD" },
-    { name: "Marylebone", crs: "MYB" }
-  ];
-
-  for (const s of stations) {
-    try {
-      const section = await loadNationalRailBoard(s.crs, s.name);
-      board.appendChild(section);
-    } catch (e) {
-      console.error(e);
-    }
-  }
-}
 
     async function loadAllStatus() {
       const board = document.getElementById('board');
       board.innerHTML = '';
+
+      await loadElizabethStatus();
       await loadTubeStatus();
-      await loadOvergroundStatus();
-      await loadStationStatus();
+
+      const pad = await getArrivals(PADDINGTON_ID);
+      const mary = await getArrivals(MARYLEBONE_ID);
+
+      addStationSection("Paddington", "#000000", pad);
+      addStationSection("Marylebone", "#1c3f94", mary);
     }
 
     loadAllStatus();
