@@ -9,51 +9,65 @@
     body {
       margin: 0;
       background: black;
-      display: flex;
-      justify-content: center;
-      align-items: flex-start;
-      overflow: hidden;
-    }
-
-    /* Scalable container */
-    .container {
-      width: 420px;              /* base layout width */
-      transform: scale(1);       /* main scaling control */
-      transform-origin: top center;
       font-family: Arial, sans-serif;
       color: white;
     }
 
-    .line {
-      padding: 16px 18px;
-      border-bottom: 1px solid #222;
+    #board {
+      width: 100%;
     }
 
-    .name {
-      display: block;
+    .row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 16px;
+      margin: 6px;
+      font-size: 2.2vw; /* responsive scaling */
+      border-radius: 6px;
+    }
+
+    .line-name {
       font-weight: bold;
-      font-size: 26px;           /* larger line name */
-      line-height: 1.1;
     }
 
     .status {
-      display: block;
-      font-size: 18px;           /* larger status text */
-      opacity: 0.9;
-      margin-top: 4px;
+      padding: 4px 10px;
+      border-radius: 4px;
+      font-weight: bold;
+      color: white;
+      margin-left: 10px;
+      white-space: nowrap;
     }
 
-    .good { color: #00ff88; }
-    .bad { color: #ff4d4d; }
+    .good {
+      background: #008000;
+    }
+
+    .bad {
+      background: #cc0000;
+    }
   </style>
 </head>
 
 <body>
-  <div class="container">
-    <div id="board"></div>
-  </div>
+  <div id="board"></div>
 
   <script>
+    const lineColors = {
+      "Bakerloo": "#B36305",
+      "Central": "#E32017",
+      "Circle": "#FFD300",
+      "District": "#00782A",
+      "Hammersmith & City": "#F3A9BB",
+      "Jubilee": "#A0A5A9",
+      "Metropolitan": "#9B0056",
+      "Northern": "#000000",
+      "Piccadilly": "#003688",
+      "Victoria": "#0098D4",
+      "Waterloo & City": "#95CDBA"
+    };
+
     async function loadStatus() {
       try {
         const res = await fetch('https://api.tfl.gov.uk/Line/Mode/tube/Status');
@@ -64,23 +78,28 @@
 
         data.forEach(line => {
           const status = line.lineStatuses[0].statusSeverityDescription;
+          const isGood = status === 'Good Service';
 
-          const el = document.createElement('div');
-          el.className = 'line';
+          const row = document.createElement('div');
+          row.className = 'row';
 
-          el.innerHTML = `
-            <span class="name">${line.name}</span>
-            <span class="status ${status === 'Good Service' ? 'good' : 'bad'}">
-              ${status}
-            </span>
-          `;
+          const name = document.createElement('span');
+          name.className = 'line-name';
+          name.textContent = line.name;
+          name.style.color = lineColors[line.name] || '#fff';
 
-          board.appendChild(el);
+          const statusEl = document.createElement('span');
+          statusEl.className = 'status ' + (isGood ? 'good' : 'bad');
+          statusEl.textContent = status;
+
+          row.appendChild(name);
+          row.appendChild(statusEl);
+          board.appendChild(row);
         });
 
       } catch (e) {
         document.getElementById('board').innerHTML =
-          '<div style="padding:16px;font-size:20px;">Error loading data</div>';
+          '<div style="padding:16px;">Error loading data</div>';
       }
     }
 
