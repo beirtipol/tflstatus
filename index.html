@@ -204,13 +204,6 @@ function pickBestStopPoint(matches, mode) {
   return matches.find(m => m.modes?.includes(mode)) || null;
 }
 
-  // Prefer main rail / tube station entries (avoid minor entrances)
-  const preferred =
-    data.matches.find(m => m.id && (m.modes?.includes("national-rail") || m.modes?.includes("tube"))) ||
-    data.matches[0];
-
-  return preferred.id;
-}
 
 async function loadStationStatus() {
   const board = document.getElementById('board');
