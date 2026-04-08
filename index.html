@@ -193,91 +193,85 @@
       }
     }
 
-async function getStopPoints(query) {
-  const res = await fetch(`https://api.tfl.gov.uk/StopPoint/Search?query=${encodeURIComponent(query)}`);
+async function loadNationalRailBoard(crs, name) {
+  const res = await fetch(`https://transportapi.com/v3/uk/train/station/${crs}/live.json?app_id=demo&app_key=demo&darwin=false&train_status=passenger`);
   const data = await res.json();
 
-  return data.matches || [];
-}
+  const services = (data.departures?.all || [])
+    .slice(0, 5);
 
-function pickBestStopPoint(matches, mode) {
-  return matches.find(m => m.modes?.includes(mode)) || null;
-}
+  const alerts = data.disruptions || [];
 
+  const section = document.createElement('div');
+  section.className = 'station-section';
+
+  const title = document.createElement('div');
+  title.style.padding = '1vh 1vw';
+  title.style.fontWeight = 'bold';
+  title.style.fontSize = 'clamp(13px, 1.7vw, 26px)';
+  title.textContent = name;
+
+  section.appendChild(title);
+
+  // alerts (if any)
+  if (alerts.length > 0) {
+    const alertBox = document.createElement('div');
+    alertBox.style.padding = '1vh 1vw';
+    alertBox.style.background = '#ffdddd';
+    alertBox.style.color = '#900';
+    alertBox.style.fontSize = 'clamp(12px, 1.5vw, 20px)';
+    alertBox.textContent = alerts[0].title || 'Service disruption';
+    section.appendChild(alertBox);
+  }
+
+  if (services.length === 0) {
+    const none = document.createElement('div');
+    none.style.padding = '1vh 1vw';
+    none.textContent = 'No departures';
+    section.appendChild(none);
+    return section;
+  }
+
+  services.forEach(s => {
+    const row = document.createElement('div');
+    row.className = 'station-row';
+
+    const dest = document.createElement('div');
+    dest.className = 'station-name';
+    dest.textContent = s.destination_name || 'Unknown';
+
+    const time = document.createElement('div');
+    time.className = 'station-status';
+    time.textContent = s.best_departure_estimate || s.expected_departure_time || '';
+
+    row.appendChild(dest);
+    row.appendChild(time);
+    section.appendChild(row);
+  });
+
+  return section;
+}
 
 async function loadStationStatus() {
   const board = document.getElementById('board');
 
-  const stationsTitle = document.createElement('div');
-  stationsTitle.className = 'section-title';
-  stationsTitle.textContent = 'Train Departures';
-  board.appendChild(stationsTitle);
+  const title = document.createElement('div');
+  title.className = 'section-title';
+  title.textContent = 'National Rail Departures';
+  board.appendChild(title);
 
   const stations = [
-    { name: "Paddington", query: "Paddington" },
-    { name: "Marylebone", query: "Marylebone" }
+    { name: "Paddington", crs: "PAD" },
+    { name: "Marylebone", crs: "MYB" }
   ];
 
-  for (const station of stations) {
-    const matches = await getStopPoints(station.query);
-
-    // IMPORTANT: pick national rail, not tube
-    const stop = pickBestStopPoint(matches, "national-rail");
-
-    const section = document.createElement('div');
-    section.className = 'station-section';
-
-    const title = document.createElement('div');
-    title.style.padding = '1vh 1vw';
-    title.style.fontWeight = 'bold';
-    title.textContent = station.name;
-
-    section.appendChild(title);
-
-    if (!stop) {
-      const msg = document.createElement('div');
-      msg.style.padding = '1vh 1vw';
-      msg.textContent = 'No rail data found';
-      section.appendChild(msg);
+  for (const s of stations) {
+    try {
+      const section = await loadNationalRailBoard(s.crs, s.name);
       board.appendChild(section);
-      continue;
+    } catch (e) {
+      console.error(e);
     }
-
-    const res = await fetch(`https://api.tfl.gov.uk/StopPoint/${stop.id}/Arrivals`);
-    let data = await res.json();
-
-    data = data
-      .filter(d => d.timeToStation != null)
-      .sort((a, b) => a.timeToStation - b.timeToStation)
-      .slice(0, 5);
-
-    if (data.length === 0) {
-      const msg = document.createElement('div');
-      msg.style.padding = '1vh 1vw';
-      msg.textContent = 'No live departures';
-      section.appendChild(msg);
-    } else {
-      data.forEach(d => {
-        const row = document.createElement('div');
-        row.className = 'station-row';
-
-        const dest = document.createElement('div');
-        dest.className = 'station-name';
-        dest.textContent = d.destinationName || 'Unknown';
-
-        const mins = Math.round(d.timeToStation / 60);
-
-        const time = document.createElement('div');
-        time.className = 'station-status';
-        time.textContent = mins <= 0 ? 'Due' : `${mins} min`;
-
-        row.appendChild(dest);
-        row.appendChild(time);
-        section.appendChild(row);
-      });
-    }
-
-    board.appendChild(section);
   }
 }
 
