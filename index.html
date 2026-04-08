@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>TfL Sidebar</title>
+  <style>
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: black;
+      color: white;
+    }
+    .line {
+      padding: 14px;
+      border-bottom: 1px solid #222;
+      font-size: 20px;
+      display: flex;
+      justify-content: space-between;
+    }
+    .good { color: #00ff88; }
+    .bad { color: #ff4d4d; }
+  </style>
+</head>
+<body>
+
+<div id="board"></div>
+
+<script>
+fetch('https://api.tfl.gov.uk/Line/Mode/tube/Status')
+  .then(r => r.json())
+  .then(data => {
+    const board = document.getElementById('board');
+
+    data.forEach(line => {
+      const status = line.lineStatuses[0].statusSeverityDescription;
+
+      const el = document.createElement('div');
+      el.className = 'line';
+
+      el.innerHTML = `
+        <span>${line.name}</span>
+        <span class="${status === 'Good Service' ? 'good' : 'bad'}">
+          ${status}
+        </span>
+      `;
+
+      board.appendChild(el);
+    });
+  });
+</script>
+
+</body>
+</html>
